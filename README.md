@@ -1,39 +1,55 @@
-# Solidity Game - [Game Title] Attack
+# Solidity Game - Preservation Attack
 
-_Inspired by OpenZeppelin's [Ethernaut](https://ethernaut.openzeppelin.com), [Game Title] Level_
+_Inspired by OpenZeppelin's [Ethernaut](https://ethernaut.openzeppelin.com), Preservation Level_
 
 ⚠️Do not try on mainnet!
 
 ## Task
 
-Hacker the basic token contract below.
-
-1. You are given 20 tokens to start with and you will beat the game if you somehow manage to get your hands on any additional tokens. Preferably a very large amount of tokens.
+This contract utilizes a library to store two different times for two different timezones. The constructor creates two instances of the library for each time to be stored.
+The goal of this game is for you to claim ownership of the instance you are given.
 
 _Hint:_
 
-1. What is an odometer?
+1. Look into Solidity's documentation on the `delegatecall` low level function, how it works, how it can be used to delegate operations to on-chain. libraries, and what implications it has on execution scope.
+2. Understanding what it means for `delegatecall` to be context-preserving.
+3. Understanding how storage variables are stored and accessed.
+4. Understanding how casting works between different data types.
 
 ## What will you learn?
 
-1. Solidity Security Consideration
-2. **Underflow** and **Overflow** in use of unsigned integers
+1. `delegatecall` low level operation
+2. `library` vs `contract`
+3. [Layout of State Variables in Storage](https://docs.soliditylang.org/en/v0.8.6/internals/layout_in_storage.html)
 
 ## What is the most difficult challenge?
 
-**You won't get success to attack if the target contract has been complied in Solidity 0.8.0 or uppper** 🤔
+This game requires you to combine knowledge from [Delegation Attack](https://github.com/maAPPsDEV/delegation-attack) and [Privacy Attack](https://github.com/maAPPsDEV/privacy-attack) to claim ownership of the contract.
 
-> [**Solidity v0.8.0 Breaking Changes**](https://docs.soliditylang.org/en/v0.8.5/080-breaking-changes.html?highlight=underflow#silent-changes-of-the-semantics)
->
-> Arithmetic operations revert on **underflow** and **overflow**. You can use `unchecked { ... }` to use the previous wrapping behaviour.
->
-> Checks for overflow are very common, so we made them the default to increase readability of code, even if it comes at a slight increase of gas costs.
+### Delegation Attack 🤗
 
-I had tried to do everything in Solidity 0.8.5 at first time, but it didn't work, as it reverted transactions everytime it met underflow.
+![preservation1](https://user-images.githubusercontent.com/78368735/124507925-d39f4800-dd9c-11eb-9d4c-a29b6214b41f.jpeg)
 
-Finally, I found that Solidity included those checks by defaults while using sliencely more gas.
+- `Delegate` call is a special, low level function call intended to invoke functions from another, often library, contract.
+- If Contract A makes a `delegatecall` to Contract B, it allows Contract B to freely mutate its storage A, given Contract B’s relative storage reference pointers.
 
-So, don't you need to use [`SafeMath`](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol)?
+> _**Hint:** if Contract A invokes Contract B, and you can control Contract B, you can easily mutate the state of Contract A._
+
+### Privacy Attack 🙄
+
+![preservation2](https://user-images.githubusercontent.com/78368735/124508000-fdf10580-dd9c-11eb-9646-428f2fccf99a.jpeg)
+
+- Ethereum allots 32-byte sized storage slots to store state. Slots start at index `0` and sequentially go up to `2²⁵⁶` slots.
+- Basic datatypes are laid out contiguously in storage starting from position `0`, then `1`, until `2²⁵⁶-1`.
+- If the _**combined size**_ of sequentially declared data is _**less than 32 bytes**_, then the sequential data points are packed into a single storage slot to optimize space and gas.
+
+> _**Hint:** If you can match up storage data locations between Contract A and Contract B, you can precisely manipulate the desired variables in Contract A._
+
+## Security Considerations
+
+- Ideally, libraries should not store state.
+- When creating libraries, use `library`, not `contract`, to ensure libraries will not modify caller storage data when caller uses `delegatecall`.
+Use higher level function calls to inherit from libraries, especially when you i) don’t need to change contract storage and ii) do not care about gas control.
 
 ## Source Code
 
