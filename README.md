@@ -49,7 +49,7 @@ This game requires you to combine knowledge from [Delegation Attack](https://git
 
 - Ideally, libraries should not store state.
 - When creating libraries, use `library`, not `contract`, to ensure libraries will not modify caller storage data when caller uses `delegatecall`.
-Use higher level function calls to inherit from libraries, especially when you i) don’t need to change contract storage and ii) do not care about gas control.
+  Use higher level function calls to inherit from libraries, especially when you i) don’t need to change contract storage and ii) do not care about gas control.
 
 ## Source Code
 
@@ -57,25 +57,41 @@ Use higher level function calls to inherit from libraries, especially when you i
 
 ```solidity
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity >=0.4.22 <0.9.0;
 
-contract Token {
-  mapping(address => uint256) balances;
-  uint256 public totalSupply;
+contract Preservation {
+  // public library contracts
+  address public timeZone1Library;
+  address public timeZone2Library;
+  address public owner;
+  uint256 storedTime;
+  // Sets the function signature for delegatecall
+  bytes4 constant setTimeSignature = bytes4(keccak256("setTime(uint256)"));
 
-  constructor(uint256 _initialSupply) public {
-    balances[msg.sender] = totalSupply = _initialSupply;
+  constructor(address _timeZone1LibraryAddress, address _timeZone2LibraryAddress) public {
+    timeZone1Library = _timeZone1LibraryAddress;
+    timeZone2Library = _timeZone2LibraryAddress;
+    owner = msg.sender;
   }
 
-  function transfer(address _to, uint256 _value) public returns (bool) {
-    require(balances[msg.sender] - _value >= 0);
-    balances[msg.sender] -= _value;
-    balances[_to] += _value;
-    return true;
+  // set the time for timezone 1
+  function setFirstTime(uint256 _timeStamp) public {
+    timeZone1Library.delegatecall(abi.encodePacked(setTimeSignature, _timeStamp));
   }
 
-  function balanceOf(address _owner) public view returns (uint256 balance) {
-    return balances[_owner];
+  // set the time for timezone 2
+  function setSecondTime(uint256 _timeStamp) public {
+    timeZone2Library.delegatecall(abi.encodePacked(setTimeSignature, _timeStamp));
+  }
+}
+
+// Simple library contract to set the time
+contract LibraryContract {
+  // stores a timestamp
+  uint256 storedTime;
+
+  function setTime(uint256 _time) public {
+    storedTime = _time;
   }
 }
 
@@ -120,9 +136,9 @@ Compiling your contracts...
 
 
   Contract: Hacker
-    √ should steal countless of tokens (377ms)
+    √ should claim ownership (393ms)
 
 
-  1 passing (440ms)
+  1 passing (457ms)
 
 ```
